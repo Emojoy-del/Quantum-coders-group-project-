@@ -1,44 +1,76 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "./components/Navbar";
-import EventList from "./components/EventList";
 import BookingForm from "./components/BookingForm";
 import BookingList from "./components/BookingList";
-import SearchBar from "./components/SearchBar";
+
+const EVENTS = [
+  { id: 1, title: "React Conference" },
+  { id: 2, title: "UI/UX Workshop" },
+  { id: 3, title: "JavaScript Bootcamp" },
+];
 
 export default function App() {
-  const [events] = useState([
-    { id: 1, title: "Concert", date: "2026-05-01" },
-    { id: 2, title: "Football Match", date: "2026-05-05" },
-  ]);
+  // ✅ Load from localStorage safely (NO useEffect needed)
+  const [bookings, setBookings] = useState(() => {
+    try {
+      const saved = localStorage.getItem("bookings");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
-  const [search, setSearch] = useState("");
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [bookings, setBookings] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(EVENTS[0]);
+  const [name, setName] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const filteredEvents = events.filter((e) =>
-    e.title.toLowerCase().includes(search.toLowerCase())
-  );
+  // ✅ Save bookings when they change
+  useEffect(() => {
+    localStorage.setItem("bookings", JSON.stringify(bookings));
+  }, [bookings]);
 
-  const handleBook = (event) => {
-    setSelectedEvent(event);
+  // ✅ Add or Update booking
+  const handleSubmit = () => {
+    if (!name.trim()) return;
+
+    const newBooking = {
+      id: Date.now(),
+      name,
+      event: selectedEvent.title,
+    };
+
+    setBookings((prev) => [...prev, newBooking]);
+    setName("");
+    setSuccess("Booking successful!");
+
+    setTimeout(() => setSuccess(""), 2000);
   };
 
-  const addBooking = (booking) => {
-    setBookings([...bookings, booking]);
-    setSelectedEvent(null);
+  // ✅ Delete booking
+  const handleDelete = (id) => {
+    setBookings((prev) => prev.filter((b) => b.id !== id));
   };
 
   return (
-    <div className="p-4">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-4">
       <Navbar />
 
-      <SearchBar value={search} onChange={setSearch} />
+      <div className="max-w-2xl mx-auto mt-6">
+        <BookingForm
+          name={name}
+          setName={setName}
+          selectedEvent={selectedEvent}
+          setSelectedEvent={setSelectedEvent}
+          events={EVENTS}
+          onSubmit={handleSubmit}
+        />
 
-      <EventList events={filteredEvents} onBook={handleBook} />
+        {success && (
+          <p className="text-green-500 mt-2 text-sm">{success}</p>
+        )}
 
-      <BookingForm selectedEvent={selectedEvent} onAdd={addBooking} />
-
-      <BookingList bookings={bookings} />
+        <BookingList bookings={bookings} onDelete={handleDelete} />
+      </div>
     </div>
   );
 }
